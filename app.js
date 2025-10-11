@@ -4,6 +4,7 @@ import morgan from "morgan";
 import router from "./routes/index.js";
 import { swaggerUi, specs } from "./docs/swagger.js";
 import errorHandler from "./middleware/errorhandler.js";
+import { adminJs, router as adminRouter } from './admin.js'
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 app.use(errorHandler);
+app.use(adminJs.options.rootPath, adminRouter)
 
 app.get("/", (req, res) => {
   res.send("Hello , Pankaj said hi :)");
