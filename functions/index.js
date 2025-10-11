@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
-import User from "../models/User.js";
+import { User } from "../models/index.js";
 import { SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD } from "../config/variables.js";
 import Notifications from "../models/notifications.js";
+
 
 export const hashedPassword = async (password) => {
   try {

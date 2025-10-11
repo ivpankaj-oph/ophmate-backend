@@ -1,24 +1,38 @@
-import mongoose from "mongoose";
-import { MONGODB_URL } from "../../config/variables.js";
-import { createSuperAdmin } from "../../functions/index.js";
+import { PG_DB, PG_USER, PG_PASS, PG_HOST, PG_PORT } from "../../config/variables.js";
+import { Sequelize } from "sequelize";
 
-export const connectDB = async() =>{
-    await mongoose.connect(MONGODB_URL).then(async()=>{
-        console.log('MongoDB connected successfully')
-        await createSuperAdmin()
-    }).catch((err)=>{
-        console.error(err)
-        process.exit(1);
-    })
-}
+export const sequelize = new Sequelize(PG_DB, PG_USER, PG_PASS, {
+  host: PG_HOST,
+  port: PG_PORT || 5432,
+  dialect: "postgres",
+  logging: false,
+});
 
-export const closeDB = async(signal) => {
+export const connectDB = async () => {
   try {
-    await mongoose.connection.close();
-    console.log(`MongoDB connection closed due to ${signal}`);
-    process.exit(0);
+    await sequelize.authenticate();
+    console.log("✅ PostgreSQL connected successfully");
+
+    // Import and initialize all models dynamically
+    const { initModels } = await import("../../models/index.js");
+    await initModels(sequelize);
+
+    // Sync all models
+    await sequelize.sync({ alter: true });
+    console.log("✅ All models synchronized successfully");
   } catch (err) {
-    console.error('Error closing MongoDB connection:', err);
+    console.error("❌ Error connecting to PostgreSQL:", err);
     process.exit(1);
   }
-}
+};
+
+export const closeDB = async (signal) => {
+  try {
+    await sequelize.close();
+    console.log(`PostgreSQL connection closed due to ${signal}`);
+    process.exit(0);
+  } catch (err) {
+    console.error("Error closing PostgreSQL connection:", err);
+    process.exit(1);
+  }
+};

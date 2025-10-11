@@ -1,4 +1,4 @@
-import runEmailConsumer from "../consumers/consumer.js";
+// import runEmailConsumer from "../consumers/consumer.js";
 
 
-runEmailConsumer().catch(console.error);
+// runEmailConsumer().catch(console.error);
