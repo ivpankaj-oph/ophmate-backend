@@ -18,40 +18,40 @@ export const comparePassword = async (plainPassword, hashedPassword) => {
   return await bcrypt.compare(plainPassword, hashedPassword);
 };
 
-export const createSuperAdmin = async () => {
-  try {
-    const existingSuperAdmin = await User.findOne({ user_type: "super_admin" });
+// export const createSuperAdmin = async () => {
+//   try {
+//     const existingSuperAdmin = await User.findOne({ user_type: "super_admin" });
 
-    if (existingSuperAdmin) {
-      return;
-    }
+//     if (existingSuperAdmin) {
+//       return;
+//     }
 
-    const email = SUPERADMIN_EMAIL;
-    const password = SUPERADMIN_PASSWORD;
+//     const email = SUPERADMIN_EMAIL;
+//     const password = SUPERADMIN_PASSWORD;
 
-    const hashed = await hashedPassword(password);
+//     const hashed = await hashedPassword(password);
 
-    const superAdmin = new User({
-      email,
-      password: hashed,
-      user_type: "super_admin",
-      isVerified:true,
-      profileCompleted:true,
-      phone_number: 9911064724,
-    });
+//     const superAdmin = new User({
+//       email,
+//       password: hashed,
+//       user_type: "super_admin",
+//       isVerified:true,
+//       profileCompleted:true,
+//       phone_number: 9911064724,
+//     });
 
-    await superAdmin.save();
+//     await superAdmin.save();
 
-    console.log("Superadmin created successfully:", email);
-  } catch (error) {
-    console.error("Error creating superadmin:", error);
-  }
-};
+//     console.log("Superadmin created successfully:", email);
+//   } catch (error) {
+//     console.error("Error creating superadmin:", error);
+//   }
+// };
 
-export const getSuperAdminId = async () => {
-  const superadmin = await User.findOne({ user_type: "super_admin" });
-  return superadmin ? superadmin._id : null;
-};
+// export const getSuperAdminId = async () => {
+//   const superadmin = await User.findOne({ user_type: "super_admin" });
+//   return superadmin ? superadmin._id : null;
+// };
 
 export const createNotification = async ({ user_id, type, message }) => {
 
@@ -72,3 +72,9 @@ export const generateOtp = (length = 6) => {
   }
   return otp;
 };
+
+// export const sendOtp = async (phone,otp) => {
+//   console.log(`Sending OTP ${otp} to phone ${phone}`);
+//   const otp = generateOtp();
+//   return otp;
+// }

@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from "socket.io";
 // import redisClient, { redisSubscriber } from "../redis/index.js";
 import { decodeToken } from "../jwt/index.js";
-import { getSuperAdminId } from "../../functions/index.js";
+// import { getSuperAdminId } from "../../functions/index.js";
 import { ADMIN_NOTIFICATION_SOCKET } from "../../config/variables.js";
 
 let io;

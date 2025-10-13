@@ -13,3 +13,39 @@ export const decodeToken = (token) => {
     return null;
   }
 };
+
+
+export const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "No token provided" });
+
+  try {
+    const decoded = jwt.verify(token,JWT_SECRET);
+    req.vendor = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+};
+
+export const verifyAdmin = (req, res, next) => {
+  if (!req.vendor || req.vendor.role !== "admin") {
+    return res.status(403).json({ message: "Access denied. Admins only." });
+  }
+  next();
+};
+
+export const verifyVendor = (req, res, next) => {
+  if (!req.vendor || req.vendor.role !== "vendor") {
+    return res.status(403).json({ message: "Access denied. Vendors only." });
+  }
+  next();
+};
+
+export const verifyUser = (req, res, next) => {
+  if (!req.vendor || req.vendor.role !== "customer") {
+    return res.status(403).json({ message: "Access denied. Users only." });
+  }
+  next();
+};
+

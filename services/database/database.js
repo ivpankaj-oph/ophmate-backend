@@ -1,5 +1,13 @@
-import { PG_DB, PG_USER, PG_PASS, PG_HOST, PG_PORT } from "../../config/variables.js";
+import {
+  PG_DB,
+  PG_USER,
+  PG_PASS,
+  PG_HOST,
+  PG_PORT,
+} from "../../config/variables.js";
 import { Sequelize } from "sequelize";
+import { createAdminUser } from "../../controllers/admin.controller.js";
+
 
 export const sequelize = new Sequelize(PG_DB, PG_USER, PG_PASS, {
   host: PG_HOST,
@@ -13,11 +21,9 @@ export const connectDB = async () => {
     await sequelize.authenticate();
     console.log("✅ PostgreSQL connected successfully");
 
-    // Import and initialize all models dynamically
     const { initModels } = await import("../../models/index.js");
     await initModels(sequelize);
-
-    // Sync all models
+    await createAdminUser()
     await sequelize.sync({ alter: true });
     console.log("✅ All models synchronized successfully");
   } catch (err) {

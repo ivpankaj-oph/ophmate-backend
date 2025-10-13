@@ -1,176 +1,170 @@
-
+// controllers/user.controller.js
 import bcrypt from "bcrypt";
 import { User } from "../models/index.js";
+import { encodeToken } from "../services/jwt/index.js";
+import { comparePassword, hashedPassword } from "../functions/index.js";
+import multer from "multer";
+import path from "path";
+import { Address } from "../models/index.js";
 
-/**
- * @desc Register a new user
- * @route POST /api/users/register
- */
-export const registerUser = async (req, res, next) => {
+export const registerUser = async (req, res) => {
   try {
-    const { name, email, phone, password, address, city, state, pincode, country, role } = req.body;
+    const { name, email, phone, password } = req.body;
 
-    if (!name || !email || !phone || !password) {
-      return res.status(400).json({ message: "Name, email, phone, and password are required" });
-    }
+    if (!name || !email || !phone || !password)
+      return res.status(400).json({ message: "All fields are required" });
 
-    // Check existing user
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(409).json({ message: "Email already registered" });
-    }
+    const existing = await User.findOne({ where: { email } });
+    if (existing) return res.status(400).json({ message: "Email already exists" });
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hash = await hashedPassword(password);
 
-    const user = await User.create({
-      name,
-      email,
-      phone,
-      password: hashedPassword,
-      address,
-      city,
-      state,
-      pincode,
-      country,
-      role,
-    });
+    const user = await User.create({ name, email, phone, password: hash });
 
-    return res.status(201).json({
-      message: "User registered successfully",
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
-    });
+    const token = encodeToken({ id: user.id, role: user.role });
+
+    res.status(201).json({ message: "User registered", token, user });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-/**
- * @desc User login
- * @route POST /api/users/login
- */
-export const loginUser = async (req, res, next) => {
+
+export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: "Email and password are required" });
+    const user = await User.findOne({ where: { email } });
 
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const valid = await comparePassword(password, user.password);
+    if (!valid) return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = encodeToken({ id: user.id, role: user.role });
+    res.status(200).json({ message: "Login successful", token, user });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
     const user = await User.findOne({ where: { email } });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ message: "Invalid credentials" });
+    const hash = await hashedPassword(newPassword);
+    await user.update({ password: hash });
 
-    // Later you can add JWT token generation here
-    return res.status(200).json({
-      message: "Login successful",
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
-    });
+    res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-/**
- * @desc Get all users (admin only)
- * @route GET /api/users
- */
-export const getUsers = async (req, res, next) => {
+export const getProfile = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
-    const page = parseInt(req.query.page) || 1;
-    const offset = (page - 1) * limit;
+    const { id } = req.user; // from JWT middleware
+    const user = await User.findByPk(id, { attributes: { exclude: ["password"] } });
 
-    const { rows: users, count } = await User.findAndCountAll({
-      limit,
-      offset,
-      order: [["createdAt", "DESC"]],
-      attributes: { exclude: ["password"] },
-    });
-
-    return res.status(200).json({
-      total: count,
-      page,
-      totalPages: Math.ceil(count / limit),
-      users,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * @desc Get single user by ID
- * @route GET /api/users/:id
- */
-export const getUserById = async (req, res, next) => {
-  try {
-    const user = await User.findByPk(req.params.id, {
-      attributes: { exclude: ["password"] },
-    });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    return res.status(200).json(user);
+    res.status(200).json({ user });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-/**
- * @desc Update user details
- * @route PUT /api/users/:id
- */
-export const updateUser = async (req, res, next) => {
+export const updateProfile = async (req, res) => {
   try {
-    const { password, ...rest } = req.body;
+    const { id } = req.user;
+    const { name, phone, city, state, pincode } = req.body;
 
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findByPk(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (password) {
-      rest.password = await bcrypt.hash(password, 10);
-    }
+    await user.update({ name, phone, city, state, pincode });
 
-    await user.update(rest);
-    return res.status(200).json({ message: "User updated successfully", user });
+    res.status(200).json({ message: "Profile updated", user });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-/**
- * @desc Delete user
- * @route DELETE /api/users/:id
- */
-export const deleteUser = async (req, res, next) => {
-  try {
-    const user = await User.findByPk(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    await user.destroy();
-    return res.status(200).json({ message: "User deleted successfully" });
+
+
+const storage = multer.diskStorage({
+  destination: "uploads/profile",
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+
+
+export const upload = multer({ storage });
+
+export const uploadProfilePhoto = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const user = await User.findByPk(id);
+
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    await user.update({ profile_photo: `/uploads/profile/${req.file.filename}` });
+
+    res.status(200).json({ message: "Profile photo updated", path: user.profile_photo });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-/**
- * @desc Toggle active/inactive user
- * @route PATCH /api/users/:id/toggle
- */
-export const toggleUserStatus = async (req, res, next) => {
+
+export const addAddress = async (req, res) => {
   try {
-    const user = await User.findByPk(req.params.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const { id } = req.user;
+    const { label, address_line, city, state, pincode, is_default } = req.body;
 
-    user.is_active = !user.is_active;
-    await user.save();
-
-    return res.status(200).json({
-      message: `User ${user.is_active ? "activated" : "deactivated"} successfully`,
-      user,
+    const address = await Address.create({
+      user_id: id,
+      label,
+      address_line,
+      city,
+      state,
+      pincode,
+      is_default,
     });
+
+    res.status(201).json({ message: "Address added", address });
   } catch (error) {
-    next(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+
+export const getAllAddresses = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const addresses = await Address.findAll({ where: { user_id: id } });
+
+    res.status(200).json({ addresses });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const deleteAddress = async (req, res) => {
+  try {
+    const { addressId } = req.params;
+    const address = await Address.findByPk(addressId);
+
+    if (!address) return res.status(404).json({ message: "Address not found" });
+
+    await address.destroy();
+    res.status(200).json({ message: "Address deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
