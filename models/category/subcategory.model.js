@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 
-export const CategoryModel = (sequelize) => {
-  const Category = sequelize.define("Category", {
+export const SubCategoryModel = (sequelize) => {
+  const SubCategory = sequelize.define("SubCategory", {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
@@ -10,27 +10,27 @@ export const CategoryModel = (sequelize) => {
     name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
     },
     slug: {
       type: DataTypes.STRING,
-      allowNull: true,
       unique: true,
     },
     description: {
       type: DataTypes.TEXT,
-      allowNull: true,
     },
     image_url: {
       type: DataTypes.STRING,
-      allowNull: true,
     },
-    is_active: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true,
+    category_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: "Categories",
+        key: "id",
+      },
+      onDelete: "CASCADE",
     },
-
   });
 
-  return Category;
+  return SubCategory;
 };

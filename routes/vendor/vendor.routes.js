@@ -7,9 +7,10 @@ import {
   sendPhoneOtp,
   verifyPhoneOtp,
   getVendorProfile,
+  getVendorDashboard,
 } from "../../controllers/vendor.controller.js";
 import { verifyToken, verifyVendor } from "../../services/jwt/index.js";
-import { getAllCategories, getCategoryById } from "../../controllers/category.controller.js";
+import { getAllCategories } from "../../controllers/category/category.controller.js";
 
 const router = express.Router();
 
@@ -26,6 +27,6 @@ router.get("/profile", getVendorProfile);
 router.post("/login", loginVendor);
 router.post("/forgot-password", forgotPassword);
 router.get("/get-category", getAllCategories);
-router.get("/get-category/:id", getCategoryById);
 
+router.get("/dashboard",  getVendorDashboard);
 export default router;

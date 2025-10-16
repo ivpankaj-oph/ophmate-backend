@@ -22,7 +22,8 @@ const computeFinal = (price, discount) => {
 export const createProduct = async (req, res) => {
   const t = await Product.sequelize.transaction();
   try {
-    const vendorId = req.vendor.id;
+    console.log("🔍 Incoming createProduct request:", req.user,);
+    const vendorId = req.user.id;
     const {
       name,
       short_description,

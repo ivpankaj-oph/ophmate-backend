@@ -21,7 +21,7 @@ export const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token,JWT_SECRET);
-    req.vendor = decoded;
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });
@@ -29,21 +29,21 @@ export const verifyToken = (req, res, next) => {
 };
 
 export const verifyAdmin = (req, res, next) => {
-  if (!req.vendor || req.vendor.role !== "admin") {
+  if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ message: "Access denied. Admins only." });
   }
   next();
 };
 
 export const verifyVendor = (req, res, next) => {
-  if (!req.vendor || req.vendor.role !== "vendor") {
+  if (!req.user || req.user.role !== "vendor") {
     return res.status(403).json({ message: "Access denied. Vendors only." });
   }
   next();
 };
 
 export const verifyUser = (req, res, next) => {
-  if (!req.vendor || req.vendor.role !== "customer") {
+  if (!req.user || req.user.role !== "customer") {
     return res.status(403).json({ message: "Access denied. Users only." });
   }
   next();

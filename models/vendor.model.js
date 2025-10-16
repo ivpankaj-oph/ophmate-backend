@@ -3,7 +3,7 @@ import { DataTypes } from "sequelize";
 export const VendorModel =(sequelize) => {
   const Vendor = sequelize.define("Vendor", {
     id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
-    business_name: { type: DataTypes.STRING, allowNull: true },
+    name: { type: DataTypes.STRING, allowNull: true },
     gst_number: { type: DataTypes.STRING, unique: true },
     email: { type: DataTypes.STRING, allowNull: true, unique: true },
     phone: { type: DataTypes.STRING, allowNull: false, unique: true },

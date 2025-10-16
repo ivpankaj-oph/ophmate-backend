@@ -9,7 +9,7 @@ import { Sequelize } from "sequelize";
 import { createAdminUser } from "../../controllers/admin.controller.js";
 
 
-export const sequelize = new Sequelize(PG_DB, PG_USER, PG_PASS, {
+const sequelize = new Sequelize(PG_DB, PG_USER, PG_PASS, {
   host: PG_HOST,
   port: PG_PORT || 5432,
   dialect: "postgres",
@@ -42,3 +42,6 @@ export const closeDB = async (signal) => {
     process.exit(1);
   }
 };
+
+
+export default sequelize;

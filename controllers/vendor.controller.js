@@ -1,6 +1,10 @@
 // import { generateOtp, sendOtp } from "../functions/index.js";
-import { comparePassword, generateOtp, hashedPassword } from "../functions/index.js";
-import { Vendor } from "../models/index.js";
+import {
+  comparePassword,
+  generateOtp,
+  hashedPassword,
+} from "../functions/index.js";
+import { Vendor, Product, Order } from "../models/index.js";
 import { encodeToken } from "../services/jwt/index.js";
 
 /**
@@ -9,8 +13,6 @@ import { encodeToken } from "../services/jwt/index.js";
  */
 
 const otpStore = new Map();
-
-
 
 export const sendPhoneOtp = async (req, res) => {
   try {
@@ -76,7 +78,7 @@ export const verifyPhoneOtp = async (req, res) => {
  */
 export const updatePersonalDetails = async (req, res) => {
   try {
-    const { id } = req.vendor; // from auth middleware
+    const { id } = req.user; // from auth middleware
     const { email, address, city, state, pincode, password } = req.body;
 
     const vendor = await Vendor.findByPk(id);
@@ -99,13 +101,12 @@ export const updatePersonalDetails = async (req, res) => {
   }
 };
 
-
 /**
  * 4️⃣ Add / Update Business Details
  */
 export const updateBusinessDetails = async (req, res) => {
   try {
-    const { id } = req.vendor;
+    const { id } = req.user;
     const { business_name, gst_number, bank_account, ifsc_code } = req.body;
 
     const vendor = await Vendor.findByPk(id);
@@ -137,7 +138,7 @@ export const loginVendor = async (req, res) => {
     }
 
     const vendor = await Vendor.findOne({ where: { email } });
-    console.log("vendor",vendor);
+    console.log("vendor", vendor);
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
@@ -150,7 +151,7 @@ export const loginVendor = async (req, res) => {
     }
 
     // Validate password
-    console.log("adfghjkl",vendor.password,password);
+    console.log("adfghjkl", vendor.password, password);
     const isMatch = await comparePassword(password, vendor.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
@@ -189,22 +190,61 @@ export const forgotPassword = async (req, res) => {
 
 export const getVendorProfile = async (req, res) => {
   try {
-    const { id } = req.vendor; // Extracted from JWT middleware
+    const id = req.user.user_id; // Extracted from JWT middleware
     console.log("📄 Fetching vendor profile:", id);
 
-    const vendor = await Vendor.findByPk(id, {
+    const user = await Vendor.findByPk(id, {
       attributes: { exclude: ["password"] }, // security best practice
     });
 
-    if (!vendor)
-      return res.status(404).json({ message: "Vendor not found" });
+    if (!user) return res.status(404).json({ message: "Vendor not found" });
 
     res.status(200).json({
+      success: true,
       message: "Vendor profile fetched successfully",
-      vendor,
+      user,
     });
   } catch (error) {
     console.error("💥 getVendorProfile error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getVendorDashboard = async (req, res) => {
+  try {
+    console.log("🔍 Fetching vendor dashboard for user ID:", req.user);
+    const vendorId = req.user.id;
+
+    const [totalProducts, totalOrders] = await Promise.all([
+      Product.count({ where: { vendor_id: vendorId } }),
+      Order.count({ where: { vendor_id: vendorId } }),
+    ]);
+
+    const recentOrders = await Order.findAll({
+      where: { vendor_id: vendorId },
+      limit: 5,
+      order: [["createdAt", "DESC"]],
+      include: [{ all: true }],
+    });
+    const totalRevenue = 0
+    const totalSales = 0
+    res.json({
+      success: true,
+      message: "Vendor dashboard fetched successfully",
+      data: {
+        summary: {
+          totalProducts,
+          totalOrders,
+          totalRevenue,
+          totalSales,
+        },
+        recentOrders,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Vendor dashboard error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load vendor dashboard" });
   }
 };

@@ -23,7 +23,7 @@ export const ProductModel = (sequelize) => {
   }, {
     hooks: {
       beforeValidate: (product) => {
-        // compute final_price if possible
+
         if (product.base_price) {
           const discount = product.discount_percent || 0;
           product.final_price = Number((product.base_price * (1 - discount / 100)).toFixed(2));
@@ -32,10 +32,7 @@ export const ProductModel = (sequelize) => {
     }
   });
 
-  Product.associate = (models) => {
-    Product.belongsTo(models.Vendor, { foreignKey: "vendor_id" });
-    Product.belongsTo(models.Category, { foreignKey: "category_id" });
-  };
+
 
   return Product;
 };

@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { User ,Vendor} from "../models/index.js";
+import { User, Vendor, Product, Order } from "../models/index.js";
 import { comparePassword, hashedPassword } from "../functions/index.js";
 import { encodeToken } from "../services/jwt/index.js";
 
@@ -41,29 +41,58 @@ export const loginAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
+    // 1️⃣ Validate input
     if (!email || !password) {
       return res
         .status(400)
         .json({ message: "Email and password are required" });
     }
 
-    // Find user
-    const user = await User.findOne({ where: { email } });
+    // 2️⃣ Try finding the user (admin) or vendor by email
+    let user = await User.findOne({ where: { email } });
+    let isVendor = false;
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      const vendor = await Vendor.findOne({ where: { email } });
+      if (!vendor) {
+        return res
+          .status(404)
+          .json({ message: "No admin or vendor found with this email" });
+      }
+      user = vendor;
+      isVendor = true;
     }
 
+    // 3️⃣ Check role permissions
+    if (!isVendor && user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "Access denied. Only admin or vendor can login." });
+    }
+
+    // 4️⃣ Validate password
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = await encodeToken({ user_id: user.id, role: user.role });
+    // 5️⃣ Generate token
+    const token = await encodeToken({
+      user_id: user.id,
+      role: isVendor ? "vendor" : user.role,
+    });
 
+    // 6️⃣ Send response
     res.status(200).json({
-      message: "Login successful",
+      success: true,
+      message: `${isVendor ? "Vendor" : "Admin"} login successful`,
       token,
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: isVendor ? "vendor" : user.role,
+      },
     });
   } catch (error) {
     console.error("❌ Login error:", error);
@@ -71,8 +100,38 @@ export const loginAdmin = async (req, res) => {
   }
 };
 
+export const getAdminProfile = async (req, res) => {
+  try {
+    console.log("🔍 Fetching admin profile for user ID:", req);
+    const adminId = req.user.user_id;
 
+    const admin = await User.findOne({
+      where: { id: adminId, role: "admin" },
+      attributes: {
+        exclude: ["password"],
+      },
+    });
 
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Admin profile fetched successfully",
+      data: admin,
+    });
+  } catch (error) {
+    console.error("Error fetching admin profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
 export const getAllVendors = async (req, res) => {
   try {
@@ -180,7 +239,6 @@ export const rejectVendor = async (req, res) => {
   }
 };
 
-
 export const deleteVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
@@ -214,8 +272,7 @@ export const getVendorDetailsById = async (req, res) => {
 
     const vendor = await Vendor.findByPk(vendorId);
 
-    if (!vendor)
-      return res.status(404).json({ message: "Vendor not found" });
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
 
     res.status(200).json({
       message: "Vendor details fetched successfully",
@@ -224,5 +281,42 @@ export const getVendorDetailsById = async (req, res) => {
   } catch (error) {
     console.error("💥 getVendorDetailsById error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getAdminDashboard = async (req, res) => {
+  try {
+    const [totalUsers, totalVendors, totalProducts, totalOrders] =
+      await Promise.all([
+        User.count(),
+        Vendor.count(),
+        Product.count(),
+        Order.count(),
+      ]);
+
+    const recentOrders = await Order.findAll({
+      limit: 5,
+      order: [["createdAt", "DESC"]],
+      include: [{ model: User, attributes: ["name", "email"] }],
+    });
+
+    res.json({
+      success: true,
+      message: "Admin dashboard fetched successfully",
+      data: {
+        summary: {
+          totalUsers,
+          totalVendors,
+          totalProducts,
+          totalOrders,
+        },
+        recentOrders,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Admin dashboard error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to load admin dashboard" });
   }
 };
