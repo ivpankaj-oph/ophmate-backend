@@ -96,9 +96,11 @@ export const loginAdmin = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Login error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+
+
 
 export const getAdminProfile = async (req, res) => {
   try {

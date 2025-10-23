@@ -1,18 +1,25 @@
 // import { generateOtp, sendOtp } from "../functions/index.js";
+import { tryCatch } from "bullmq";
 import {
   comparePassword,
   generateOtp,
+
   hashedPassword,
 } from "../functions/index.js";
 import { Vendor, Product, Order } from "../models/index.js";
 import { encodeToken } from "../services/jwt/index.js";
-
+import { sendMail } from "../services/mailing/mail.js";
+import path from "path";
 /**
  * @desc Create a new vendor
  * @route POST /api/vendors
  */
 
 const otpStore = new Map();
+
+const emailOtpStore = new Map()
+
+const OTP_EXPIRY = 5 * 60 * 1000
 
 export const sendPhoneOtp = async (req, res) => {
   try {
@@ -73,20 +80,106 @@ export const verifyPhoneOtp = async (req, res) => {
   }
 };
 
-/**
- * 3️⃣ Add / Update Personal Details
- */
+
+export const sendEmailOtp = async (req, res) => {
+  try {
+    const { id } = req.user // assuming authentication middleware sets req.user
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' })
+    }
+
+    // find user
+    const user = await Vendor.findByPk(id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    // if already verified
+    if (user.is_email_verified) {
+      return res.status(400).json({ message: 'Email already verified for this user' })
+    }
+
+    // generate and store OTP
+    const otp = generateOtp() 
+    const expiresAt = Date.now() + OTP_EXPIRY
+    emailOtpStore.set(email, { otp, expiresAt })
+
+
+    await sendMail(email, 'Your email verification code', `Your OTP is: ${otp}`)
+
+    return res.status(200).json({ message: 'OTP sent successfully to your email' })
+  } catch (error) {
+    console.error('Error sending email OTP:', error)
+    return res.status(500).json({ message: 'Failed to send OTP', error: error.message })
+  }
+}
+
+
+
+export const verifyEmailOtp = async (req, res) => {
+  try {
+    const { id } = req.user;
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
+    const user = await Vendor.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // already verified
+    if (user.is_email_verified) {
+      return res.status(400).json({ message: "Email already verified for this user" });
+    }
+
+    const record = emailOtpStore.get(email);
+    if (!record) {
+      return res.status(400).json({ message: "No OTP found for this email, please resend" });
+    }
+
+    // check expiry
+    if (Date.now() > record.expiresAt) {
+      emailOtpStore.delete(email);
+      return res.status(400).json({ message: "OTP expired, please request a new one" });
+    }
+
+    // check match
+    if (record.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // ✅ mark verified and save email
+    user.is_email_verified = true;
+    user.email = email; // save verified email
+    await user.save();
+
+    // cleanup OTP
+    emailOtpStore.delete(email);
+
+    return res.status(200).json({ message: "Email verified successfully", user });
+  } catch (error) {
+    console.error("Error verifying email OTP:", error);
+    return res.status(500).json({ message: "Failed to verify OTP", error: error.message });
+  }
+};
+
+
+
 export const updatePersonalDetails = async (req, res) => {
   try {
-    const { id } = req.user; // from auth middleware
-    const { email, address, city, state, pincode, password } = req.body;
+    const { id } = req.user; 
+    const { email, password } = req.body;
 
     const vendor = await Vendor.findByPk(id);
     if (!vendor) return res.status(404).json({ message: "Vendor not found" });
 
-    const updateData = { email, address, city, state, pincode };
+    const updateData = { email };
 
-    // Only hash and update password if provided
     if (password && password.trim() !== "") {
       const hashpass = await hashedPassword(password);
       updateData.password = hashpass;
@@ -101,28 +194,80 @@ export const updatePersonalDetails = async (req, res) => {
   }
 };
 
+
 /**
  * 4️⃣ Add / Update Business Details
  */
 export const updateBusinessDetails = async (req, res) => {
   try {
     const { id } = req.user;
-    const { business_name, gst_number, bank_account, ifsc_code } = req.body;
+
+    // Extract fields from body
+    const {
+      name,
+      gst_number,
+      business_type,
+      bank_name,
+      bank_account,
+      ifsc_code,
+      pan_number,
+      branch,
+      upi_id,
+      categories,
+      return_policy,
+      operating_hours,
+      address,
+      street,
+      city,
+      state,
+      pincode,
+      alternate_contact_name,
+      alternate_contact_phone,
+    } = req.body;
 
     const vendor = await Vendor.findByPk(id);
     if (!vendor) return res.status(404).json({ message: "Vendor not found" });
 
+    // Get file paths from Multer
+    const gst_cert_path = req.files?.gst_cert
+      ? `/uploads/vendor/${path.basename(req.files.gst_cert[0].path)}`
+      : vendor.gst_cert;
+
+    const pan_card_path = req.files?.pan_card
+      ? `/uploads/vendor/${path.basename(req.files.pan_card[0].path)}`
+      : vendor.pan_card;
+    
+    const hashPassword = await hashedPassword("pankajverma")
     await vendor.update({
-      business_name,
+      name,
       gst_number,
+      business_type,
+      bank_name,
+      pan_number,
       bank_account,
       ifsc_code,
+      branch,
+      upi_id,
+      categories,
+      return_policy,
+      operating_hours,
+      address,
+      street,
+      city,
+      state,
+      pincode,
+      password:hashPassword,
+      alternate_contact_name,
+      alternate_contact_phone,
+      gst_cert: gst_cert_path,
+      pan_card: pan_card_path,
       is_profile_completed: true,
       profile_complete_level: 100,
     });
 
     res.status(200).json({ message: "Business details updated", vendor });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error", error });
   }
 };

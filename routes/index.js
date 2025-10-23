@@ -20,7 +20,7 @@ router.use("/products", productRoutes);
 router.use("/users", userRoutes);
 router.use("/admin", adminRoutes);
 router.use("/categories",categoryRoutes );
-router.use("/admin/subcategories", subCategoryRoutes);
+router.use("/subcategories", subCategoryRoutes);
 router.use("/banners", bannerRoutes);
 router.use("/cart",cartRoutes );
 router.use("/wishlist",wishlistRoutes );

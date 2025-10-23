@@ -1,5 +1,5 @@
 export const PORT = 8000
-export const MONGODB_URL = 'mongodb://127.0.0.1:27017/seekhle'
+export const MONGODB_URL = 'mongodb://127.0.0.1:27017/ophmate'
 
 export const EMAIL = "ivpankaj15@gmail.com"
 

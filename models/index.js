@@ -13,84 +13,105 @@ let Vendor,
   User,
   Product,
   Category,
+  SubCategory,
   ProductVariant,
   Address,
   Cart,
   Wishlist,
-  Order,
-  SubCategory;
+  Order;
+
 export const initModels = (sequelize) => {
+  // Initialize models
   Vendor = VendorModel(sequelize);
   User = UserModel(sequelize);
   Product = ProductModel(sequelize);
   Category = CategoryModel(sequelize);
+  SubCategory = SubCategoryModel(sequelize);
   ProductVariant = ProductVariantModel(sequelize);
   Address = AddressModel(sequelize);
   Cart = CartModel(sequelize);
   Wishlist = WishlistModel(sequelize);
   Order = OrderModel(sequelize);
-  SubCategory = SubCategoryModel(sequelize);
-  // associations
-  Vendor.hasMany(Product, { foreignKey: "vendor_id" });
-  Product.belongsTo(Vendor, { foreignKey: "vendor_id" });
 
-  User.hasMany(Address, { foreignKey: "user_id", onDelete: "CASCADE" });
-  Address.belongsTo(User, { foreignKey: "user_id" });
+  // ------------------- ASSOCIATIONS -------------------
 
-  Product.hasMany(ProductVariant, {
-    foreignKey: "product_id",
-    onDelete: "CASCADE",
-  });
-  ProductVariant.belongsTo(Product, { foreignKey: "product_id" });
+  // ✅ Vendor ↔ Product
+  Vendor.hasMany(Product, { foreignKey: "vendor_id", as: "products" });
+  Product.belongsTo(Vendor, { foreignKey: "vendor_id", as: "vendor" });
 
-  Category.hasMany(Product, { foreignKey: "category_id" });
-  Product.belongsTo(Category, { foreignKey: "category_id" });
+  // ✅ User ↔ Address
+  User.hasMany(Address, { foreignKey: "user_id", onDelete: "CASCADE", as: "addresses" });
+  Address.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-  User.hasMany(Cart, { foreignKey: "user_id" });
-  Cart.belongsTo(User, { foreignKey: "user_id" });
+  // ✅ Category ↔ SubCategory
+  Category.hasMany(SubCategory, { foreignKey: "category_id", as: "subcategories" });
+  SubCategory.belongsTo(Category, { foreignKey: "category_id", as: "category" });
 
-  User.hasMany(Wishlist, { foreignKey: "user_id" });
-  Wishlist.belongsTo(User, { foreignKey: "user_id" });
+  // ✅ Category ↔ Product
+  Category.hasMany(Product, { foreignKey: "category_id", as: "products" });
+  Product.belongsTo(Category, { foreignKey: "category_id", as: "category" });
 
-  Product.hasMany(Cart, { foreignKey: "product_id" });
-  Cart.belongsTo(Product, { foreignKey: "product_id" });
+  // ✅ SubCategory ↔ Product (if needed)
+  SubCategory.hasMany(Product, { foreignKey: "subcategory_id", as: "products" });
+  Product.belongsTo(SubCategory, { foreignKey: "subcategory_id", as: "subcategory" });
 
-  Product.hasMany(Wishlist, { foreignKey: "product_id" });
-  Wishlist.belongsTo(Product, { foreignKey: "product_id" });
+  // ✅ Product ↔ ProductVariant
+  Product.hasMany(ProductVariant, { foreignKey: "product_id", as: "variants", onDelete: "CASCADE" });
+  ProductVariant.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
-  Vendor.hasMany(Order, { foreignKey: "vendor_id" });
-  Order.belongsTo(Vendor, { foreignKey: "vendor_id" });
+  // ✅ User ↔ Cart
+  User.hasMany(Cart, { foreignKey: "user_id", as: "cartItems" });
+  Cart.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
-  User.hasMany(Order, { foreignKey: "user_id" });
-  Order.belongsTo(User, { foreignKey: "user_id" });
+  // ✅ Product ↔ Cart
+  Product.hasMany(Cart, { foreignKey: "product_id", as: "cartProducts" });
+  Cart.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
-SubCategory.belongsTo(Category, { foreignKey: "category_id", as: "category" });
-Category.hasMany(SubCategory, { foreignKey: "category_id", as: "subcategories" });
+  // ✅ User ↔ Wishlist
+  User.hasMany(Wishlist, { foreignKey: "user_id", as: "wishlistItems" });
+  Wishlist.belongsTo(User, { foreignKey: "user_id", as: "user" });
 
+  // ✅ Product ↔ Wishlist
+  Product.hasMany(Wishlist, { foreignKey: "product_id", as: "wishlistProducts" });
+  Wishlist.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
+  // ✅ Vendor ↔ Order
+  Vendor.hasMany(Order, { foreignKey: "vendor_id", as: "orders" });
+  Order.belongsTo(Vendor, { foreignKey: "vendor_id", as: "vendor" });
+
+  // ✅ User ↔ Order
+  User.hasMany(Order, { foreignKey: "user_id", as: "orders" });
+  Order.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+  // ✅ Product ↔ Order (optional if orders track product)
+  Product.hasMany(Order, { foreignKey: "product_id", as: "orders" });
+  Order.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+  // ------------------- RETURN MODELS -------------------
   return {
     Vendor,
     User,
     Product,
     Category,
+    SubCategory,
     ProductVariant,
     Address,
     Cart,
     Wishlist,
     Order,
-    SubCategory,
   };
 };
 
+// Export models individually
 export {
   Vendor,
   User,
   Product,
   Category,
+  SubCategory,
   ProductVariant,
   Address,
   Cart,
   Wishlist,
   Order,
-  SubCategory,
 };

@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 
+
 export const CategoryModel = (sequelize) => {
   const Category = sequelize.define(
     "Category",
@@ -59,6 +60,7 @@ export const CategoryModel = (sequelize) => {
     },
     { paranoid: true } // soft delete
   );
+
 
 
 

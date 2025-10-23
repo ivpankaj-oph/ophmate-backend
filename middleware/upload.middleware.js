@@ -5,6 +5,7 @@ import path from "path";
 // Define base upload paths
 const productUploadPath = path.join(process.cwd(), "uploads", "products", "category");
 const categoryUploadPath = path.join(process.cwd(), "uploads", "category");
+const vendorUploadPath = path.join(process.cwd(), "uploads", "vendor");
 const csvUploadPath = path.join(process.cwd(), "uploads", "csv");
 
 // Ensure all folders exist
@@ -21,6 +22,15 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+const pdfFileFilter = (req, file, cb) => {
+  if (file.mimetype === "application/pdf") {
+    cb(null, true); // Accept the file
+  } else {
+    cb(new Error("Only PDF files are allowed"), false); // Reject others
+  }
+};
+
+
 // Storage for product media
 const productStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, productUploadPath),
@@ -34,6 +44,15 @@ const productStorage = multer.diskStorage({
 // ✅ Storage for category images
 const categoryStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, categoryUploadPath),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const safeName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+
+const vendorStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, vendorUploadPath),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const safeName = `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
@@ -58,7 +77,10 @@ const csvFileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-// ✅ Exports
+
+
+export const upload = multer({ storage:vendorStorage, fileFilter:pdfFileFilter });
+
 export const uploadProductMedia = multer({
   storage: productStorage,
   fileFilter,
@@ -74,3 +96,31 @@ export const uploadCSV = multer({
   storage: csvStorage,
   fileFilter: csvFileFilter,
 });
+
+
+
+
+
+
+// Create upload folders if not exist
+const makeDirIfNotExist = (dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
+
+// Storage for images & videos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = file.mimetype.startsWith("image/") 
+      ? "./uploads/products/images" 
+      : "./uploads/products/videos";
+    makeDirIfNotExist(dir);
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+  },
+});
+
+export const uploadProduct = multer({ storage });

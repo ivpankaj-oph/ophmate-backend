@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  createProduct,
+
   updateProduct,
   deleteProduct,
   addOrUpdateVariant,
@@ -9,19 +9,34 @@ import {
   previewProduct,
   bulkUploadCsv,
   listVendorProducts,
-  getVendorProduct
+  getVendorProduct,
+  createProductWithVariants,
+  getAllProducts,
+  getVendorProducts,
 } from "../../controllers/product.controller.js";
 import multer from "multer";
 import { verifyToken, verifyVendor } from "../../services/jwt/index.js";
-import { uploadProductMedia } from "../../middleware/upload.middleware.js";
+import {
+  uploadProduct,
+  uploadProductMedia,
+} from "../../middleware/upload.middleware.js";
 
 const router = express.Router();
 
 
-router.use(verifyToken,verifyVendor); 
+router.get("/all", getAllProducts);
 
-// create product (allow multiple files uploaded under 'media')
-router.post("/create", uploadProductMedia.array("media", 10), createProduct);
+
+router.use(verifyToken, verifyVendor);
+router.get("/vendor", getVendorProducts);
+router.post(
+  "/create",
+  uploadProduct.fields([
+    { name: "images", maxCount: 10 },
+    { name: "videos", maxCount: 5 },
+  ]),
+  createProductWithVariants
+);
 
 // update product (upload additional media optionally)
 router.put("/:productId", uploadProductMedia.array("media", 10), updateProduct);
@@ -51,10 +66,18 @@ router.get("/:productId/preview", previewProduct);
 // bulk upload CSV (upload as single 'csv' file)
 
 const csvStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(process.cwd(), "uploads", "bulk")),
-  filename: (req, file, cb) => cb(null, "bulk-" + Date.now() + "-" + file.originalname)
+  destination: (req, file, cb) =>
+    cb(null, path.join(process.cwd(), "uploads", "bulk")),
+  filename: (req, file, cb) =>
+    cb(null, "bulk-" + Date.now() + "-" + file.originalname),
 });
-const csvUpload = multer({ storage: csvStorage, fileFilter: (req, file, cb) => file.mimetype === "text/csv" || file.mimetype.includes("excel") ? cb(null, true) : cb(new Error("CSV only"), false) });
+const csvUpload = multer({
+  storage: csvStorage,
+  fileFilter: (req, file, cb) =>
+    file.mimetype === "text/csv" || file.mimetype.includes("excel")
+      ? cb(null, true)
+      : cb(new Error("CSV only"), false),
+});
 
 router.post("/bulk/upload", csvUpload.single("csv"), bulkUploadCsv);
 
