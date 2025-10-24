@@ -15,14 +15,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 
-const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 50,
-  message: {
-    status: 429,
-    message: "Cannot hold that much load :(",
-  },
-});
+// const limiter = rateLimit({
+//   windowMs: 1 * 60 * 1000,
+//   max: 50,
+//   message: {
+//     status: 429,
+//     message: "Cannot hold that much load :(",
+//   },
+// });
 
 
 const allowedOrigins = [
@@ -47,7 +47,7 @@ app.use(
   })
 );
 
-app.use(limiter);
+// app.use(limiter);
 app.use(morgan("dev"));
 app.use(express.json());
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));

@@ -1,4 +1,4 @@
-import bcrypt from "bcrypt";
+
 import { User, Vendor, Product, Order } from "../models/index.js";
 import { comparePassword, hashedPassword } from "../functions/index.js";
 import { encodeToken } from "../services/jwt/index.js";
@@ -195,9 +195,7 @@ export const getUnverifiedVendors = async (req, res) => {
   }
 };
 
-/**
- * 🟢 Verify / Approve a vendor
- */
+
 export const verifyVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
@@ -286,39 +284,3 @@ export const getVendorDetailsById = async (req, res) => {
   }
 };
 
-export const getAdminDashboard = async (req, res) => {
-  try {
-    const [totalUsers, totalVendors, totalProducts, totalOrders] =
-      await Promise.all([
-        User.count(),
-        Vendor.count(),
-        Product.count(),
-        Order.count(),
-      ]);
-
-    const recentOrders = await Order.findAll({
-      limit: 5,
-      order: [["createdAt", "DESC"]],
-      include: [{ model: User, attributes: ["name", "email"] }],
-    });
-
-    res.json({
-      success: true,
-      message: "Admin dashboard fetched successfully",
-      data: {
-        summary: {
-          totalUsers,
-          totalVendors,
-          totalProducts,
-          totalOrders,
-        },
-        recentOrders,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Admin dashboard error:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to load admin dashboard" });
-  }
-};
